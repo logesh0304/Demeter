@@ -1,8 +1,8 @@
 # Peckaway
  Autonomous detection and repelling of birds that damages crops using computer vision
 
-### Prequests
+### setup
 
-python 3.9
-numpy 1.19
-opencv 4.4.0
+- python 3.7.3
+- numpy 1.16.2
+- opencv 4.4.0
