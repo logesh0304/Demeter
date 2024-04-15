@@ -2,13 +2,13 @@ import cv2
 import time
 
 CONFIDENCE_THRESHOlD=0.45
-NMS_THRESHOLD=0.2
+NMS_THRESHOLD=0.3
 WEIGHTSFILE='./model/frozen_inference_graph.pb'
 CONFIGFILE='./model/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
 CLASSFILE='./model/coco.names'
 
 classNames=[]
-myClass=['bird','cat', 'dog', 'horse','sheep', 'cow', 'elephant','bear','zebra', 'giraffe']
+myClass=['person','bird','cat', 'dog', 'horse','sheep', 'cow', 'elephant','bear','zebra', 'giraffe']
 
 net=None
 def initialize():
@@ -40,8 +40,7 @@ def detect(img, draw=False, detectclasses=myClass):
             if className in detectclasses:
                 findings.append([box, className, confidence])
 
-    for f in findings:
-        print("Entities found:",*findings[1])
+    
 
     if (draw):
         for box, className, confidence in findings:
@@ -55,5 +54,8 @@ def detect(img, draw=False, detectclasses=myClass):
         cv2.waitKey(1)
         cv2.destroyAllWindows()
 
-    return findings[:][1]
+    findings=[f[1] for f in findings]
+    print("Entities found:",findings)
+
+    return findings 
 

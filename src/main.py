@@ -19,21 +19,23 @@ CAM_RESOLUTION=(640,480) #480p
 IMG_FILE='cap.jpeg'
 
 ROTATE_ANGLE=30 #deg 
+ROTATE_DELAY=1 #sec
+
 # AIM_THRESHOLD=4.2 # minimum degree 
 MAX_REPEL_ATTEMPTS=3
 STEP_ANGLE=1.8 #deg #fullstep
 COVER_ANGLE=180
 
-SOUND_PLAY_TIME=3000 # ms
+SOUND_PLAY_TIME=3 # sec
 SOUNDS_DIRECTORY='./sounds/'
-SOUND_VOLUME=0.8
+SOUND_VOLUME=0.1
 
 MOTOR_CHANNEL=(29,31,33,35) 
-PULSE_TIME=0.10 # 10ms for 180 deg per second
+PULSE_TIME=0.01 # 10ms for 180 deg per second
 PULSE_SEQUENCE=[(1,0,0,0),		# Wave drive
-				(0,1,0,0),
-				(0,0,1,0),
-				(0,0,0,1)]
+                (0,1,0,0),
+                (0,0,1,0),
+                (0,0,0,1)]
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(MOTOR_CHANNEL,GPIO.OUT)
@@ -46,67 +48,76 @@ pygame.mixer.init()
 
 pulse_seq_idx=0
 def rotate_stepper_motor(deg): # deg - for left + for right
-	steps=int(deg/STEP_ANGLE)
-	for i in range(steps):
-		if deg>0: # clockwise
-			GPIO.output(MOTOR_CHANNEL, PULSE_SEQUENCE(pulse_seq_idx))
-			pulse_seq_idx = 0 if pulse_seq_idx==3 else pulse_seq_idx+1
-		else:	# anti-clockwise
-			GPIO.output(MOTOR_CHANNEL, PULSE_SEQUENCE(pulse_seq_idx))
-			pulse_seq_idx = 3 if pulse_seq_idx==0 else pulse_seq_idx-1
-		
+    global pulse_seq_idx
+    steps=abs(int(deg/STEP_ANGLE))
+    for i in range(steps):
+        if deg>0: # clockwise
+            GPIO.output(MOTOR_CHANNEL, PULSE_SEQUENCE[pulse_seq_idx])
+            pulse_seq_idx = 0 if pulse_seq_idx==3 else pulse_seq_idx+1
+        else:	# anti-clockwise
+            GPIO.output(MOTOR_CHANNEL, PULSE_SEQUENCE[pulse_seq_idx])
+            pulse_seq_idx = 3 if pulse_seq_idx==0 else pulse_seq_idx-1
+        time.sleep(PULSE_TIME)
+        
 
 def capture_image(write=False):
-	success, img = cam.read()
-	if success:
-		if write:
-			cv2.imwrite(IMG_FILE, img)
-		return img
-	raise Exception("Image capture failed")
+    global cam
+    success, img = cam.read()
+    if success:
+        if write:
+            cv2.imwrite(IMG_FILE, img)
+        return img
+    print("Image capture failed\nretrying\n")
+    cam = cv2.VideoCapture(0)
+    cam.set(3,CAM_RESOLUTION[0])
+    cam.set(4,CAM_RESOLUTION[1])
+    return capture_image(write)
+    
 
 def play_sound(soundfile, playtime=SOUND_PLAY_TIME):
-	sound = pygame.mixer.Sound(soundfile)
-	sound.set_volume(SOUND_VOLUME)
-	playing = sound.play(loops=-1, maxtime=playtime)
-	while playing.get_busy(): 
-		pass
+    sound = pygame.mixer.Sound(soundfile)
+    sound.set_volume(SOUND_VOLUME)
+    playing = sound.play(loops=-1)
+    time.sleep(playtime)
+    playing.stop()
  
 def repel(detections, attempt):
-	
-	if attempt>MAX_REPEL_ATTEMPTS:
-		print("Can't repel Birds")
-	else:
-		for d in set(detections):
-			soundfile= SOUNDS_DIRECTORY+'beep'+'.wav'
-			play_sound(soundfile)
-	
+    
+    if attempt>MAX_REPEL_ATTEMPTS:
+        print("Can't repel Birds")
+    else:
+        for d in set(detections):
+            soundfile= SOUNDS_DIRECTORY+'beep'+'.wav'
+            play_sound(soundfile)
+    
 def main():
-	print("Peckaway started.")
-	bd.initialize()
-	attempt=1
-	curent_angle=COVER_ANGLE/2
-	rdir=1
-	try:
-		while True:
-			if curent_angle>COVER_ANGLE or curent_angle<0:
-				rdir*=-1
-			capture_image()
-			detections=bd.detect(IMG_FILE)
-			if len(detections)>0 :
-				if attempt<=MAX_REPEL_ATTEMPTS+1 : 
-					repel(detections, attempt)
-					attempt+=1
-					continue # Try to repel untill it goes
-			rotate_stepper_motor(rdir*ROTATE_ANGLE)
-			curent_angle+=rdir*ROTATE_ANGLE
-			attempt=1
-			# cloud push
-	except Exception as e:
-		print(e)
-	finally:
-		GPIO.cleanup()
-		cv2.release()
-	
+    print("Peckaway started.")
+    bd.initialize()
+    attempt=1
+    curent_angle=COVER_ANGLE/2
+    rdir=1
+    try:
+        while True:
+            if curent_angle>COVER_ANGLE or curent_angle<0:
+                rdir*=-1
 
-if __name__ == 'main':
-	main()
+            detections=bd.detect(capture_image())
+            if len(detections)>0 :
+                if attempt<=MAX_REPEL_ATTEMPTS+1 : 
+                    repel(detections, attempt)
+                    attempt+=1
+                    continue # Try to repel untill it goes
+            rotate_stepper_motor(rdir*ROTATE_ANGLE)
+            curent_angle+=rdir*ROTATE_ANGLE
+            attempt=1
+            time.sleep(ROTATE_DELAY)
+            # cloud push
+    except KeyboardInterrupt as ke:
+        print(ke)
+    finally:
+        GPIO.cleanup()
+        cam.release()
+    
+
+if __name__ == '__main__':
+    main()
