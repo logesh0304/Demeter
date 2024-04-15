@@ -3,6 +3,6 @@
 
 ### Prequests
 
-python 3.9
-numpy 1.19
+python 3.7.4
+numpy 1.16.2
 opencv 4.4.0
