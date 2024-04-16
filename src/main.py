@@ -1,8 +1,10 @@
 import RPi.GPIO as GPIO
 import time
 import birddetect as bd
+import cloudpush as cp
 import pygame
 import cv2
+import random
 
 #TODO 
 # [ ] motor in idle state to reduce power
@@ -46,6 +48,18 @@ cam.set(4,CAM_RESOLUTION[1])
 
 pygame.mixer.init()
 
+bird_sound_files=['hawk.wav', 'shotgun.wav', 'machinegun.wav']
+animal_sound_files={'person':'beebuzz.wav',
+                    'dog':'dogbeep.wav',
+                    'cat':'catbeep.wav',
+                    'cow':'dogsbark.wav',
+                    'elephant':'beebuzz.wav',
+                    'bear':'beep.wav',
+                    'horse':'thunder.wav',
+                    'sheep':'dogsbark.wav',
+                    'giraffe':'shotgun.wav',
+                    'zebra':'thunder.wav'}
+
 pulse_seq_idx=0
 def rotate_stepper_motor(deg): # deg - for left + for right
     global pulse_seq_idx
@@ -81,15 +95,17 @@ def play_sound(soundfile, playtime=SOUND_PLAY_TIME):
     time.sleep(playtime)
     playing.stop()
  
-def repel(detections, attempt):
+def repel(creature, attempt):
     
     if attempt>MAX_REPEL_ATTEMPTS:
         print("Can't repel Birds")
     else:
-        for d in set(detections):
-            soundfile= SOUNDS_DIRECTORY+'beep'+'.wav'
-            play_sound(soundfile)
-    
+        if creature=='bird':
+            soundfile=random.choice(bird_sound_files)
+        else :
+            soundfile=animal_sound_files[creature]
+        play_sound(SOUNDS_DIRECTORY+soundfile)
+
 def main():
     print("Peckaway started.")
     bd.initialize()
@@ -101,12 +117,14 @@ def main():
             if curent_angle>COVER_ANGLE or curent_angle<0:
                 rdir*=-1
 
-            detections=bd.detect(capture_image())
-            if len(detections)>0 :
+            creature=bd.detect(capture_image(True))
+            if creature :
                 if attempt<=MAX_REPEL_ATTEMPTS+1 : 
-                    repel(detections, attempt)
+                    repel(creature, attempt)
+                    cp.push(IMG_FILE, creature)
                     attempt+=1
                     continue # Try to repel untill it goes
+
             rotate_stepper_motor(rdir*ROTATE_ANGLE)
             curent_angle+=rdir*ROTATE_ANGLE
             attempt=1

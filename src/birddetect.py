@@ -25,6 +25,8 @@ def initialize():
     net.setInputSwapRB(True)
     print("Model loaded")
 
+def cloudpush():
+    pass
 
 def detect(img, draw=False, detectclasses=myClass):
 
@@ -54,8 +56,14 @@ def detect(img, draw=False, detectclasses=myClass):
         cv2.waitKey(1)
         cv2.destroyAllWindows()
 
-    findings=[f[1] for f in findings]
-    print("Entities found:",findings)
+    foundedcls=[f[1] for f in findings]
+    confs=[f[2] for f in findings]
+    creature=""
+    if len(foundedcls>1):
+        creature=foundedcls[confs.index(max(confs))]
+    elif len(foundedcls==1):
+        creature=foundedcls[0]
+    print("Entities found:",creature)
 
-    return findings 
+    return creature
 
