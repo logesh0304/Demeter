@@ -59,11 +59,11 @@ def detect(img, draw=False, detectclasses=myClass):
     foundedcls=[f[1] for f in findings]
     confs=[f[2] for f in findings]
     creature=""
-    if len(foundedcls>1):
+    if len(foundedcls)>1:
         creature=foundedcls[confs.index(max(confs))]
-    elif len(foundedcls==1):
+    elif len(foundedcls)==1:
         creature=foundedcls[0]
-    print("Entities found:",creature)
+    print("Creatures found:",creature)
 
     return creature
 

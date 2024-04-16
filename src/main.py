@@ -28,7 +28,7 @@ MAX_REPEL_ATTEMPTS=3
 STEP_ANGLE=1.8 #deg #fullstep
 COVER_ANGLE=180
 
-SOUND_PLAY_TIME=3 # sec
+SOUND_PLAY_TIME=5 # sec
 SOUNDS_DIRECTORY='./sounds/'
 SOUND_VOLUME=0.1
 
@@ -98,7 +98,7 @@ def play_sound(soundfile, playtime=SOUND_PLAY_TIME):
 def repel(creature, attempt):
     
     if attempt>MAX_REPEL_ATTEMPTS:
-        print("Can't repel Birds")
+        print("Can't repel.")
     else:
         if creature=='bird':
             soundfile=random.choice(bird_sound_files)

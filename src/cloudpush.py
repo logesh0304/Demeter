@@ -19,7 +19,7 @@ write_key='ZO9G6U7P5EWBJTA0'
 channel=thingspeak.Channel(id=channel_id, api_key=write_key)
 
 def image_push(imgfile, creature, name):
-    response=cloudinary.uploader.upload(imgfile, public_id="peckaway_caps", tags=[creature], folder='pecaway_caps')
+    response=cloudinary.uploader.upload(imgfile, public_id=name, tags=[creature], folder='pecaway_caps')
     return response['url']
 
 def push(imgfile, creature):
