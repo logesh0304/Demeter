@@ -1,4 +1,4 @@
-# Peckaway
+# Demeter
  Autonomous detection and repelling of birds and animals that damages crops using computer vision
 
 ### setup
