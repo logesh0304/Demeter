@@ -40,9 +40,7 @@ def detect(img, draw=False, detectclasses=myClass):
         for classId, confidence,box in zip(classIds.flatten(),confs.flatten(),bbox):
             className = classNames[classId - 1]
             if className in detectclasses:
-                findings.append([box, className, confidence])
-
-    
+                findings.append([box, className, confidence])    
 
     if (draw):
         for box, className, confidence in findings:
@@ -60,6 +58,11 @@ def detect(img, draw=False, detectclasses=myClass):
     confs=[f[2] for f in findings]
     creature=""
     if len(foundedcls)>1:
+        if foundedcls.count('person')>0 :
+            i=foundedcls.index('person')
+            foundedcls.pop(i)
+            confs.pop(i)
+        
         creature=foundedcls[confs.index(max(confs))]
     elif len(foundedcls)==1:
         creature=foundedcls[0]

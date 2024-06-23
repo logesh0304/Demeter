@@ -1,10 +1,12 @@
 import RPi.GPIO as GPIO
 import time
-import birddetect as bd
-import cloudpush as cp
 import pygame
 import cv2
 import random
+
+import birddetect as bd
+import cloudpush as cp
+import rover 
 
 #TODO 
 # [ ] motor in idle state to reduce power
@@ -16,7 +18,7 @@ import random
 # FOV 				53.5,41.41	62.2,48.8 	66,41
 
 # CAM_FOV=(62.2, 48.8) # (xdeg, ydeg) 
-# CAM_FULL_RESOLUTION=(3280,2464) 	
+# CAM_FULL_RESOLUTION=(3280,2464)
 CAM_RESOLUTION=(640,480) #480p
 IMG_FILE='cap.jpeg'
 
@@ -42,13 +44,10 @@ PULSE_SEQUENCE=[(1,0,0,0),		# Wave drive
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(MOTOR_CHANNEL,GPIO.OUT)
 
-cam = cv2.VideoCapture(0)
-cam.set(3,CAM_RESOLUTION[0])
-cam.set(4,CAM_RESOLUTION[1])
 
 pygame.mixer.init()
 
-bird_sound_files=['hawk.wav', 'shotgun.wav', 'machinegun.wav']
+bird_sound_files=['catbeep.wav', 'hawk.wav', 'shotgun.wav', 'machinegun.wav']
 animal_sound_files={'person':'beebuzz.wav',
                     'dog':'dogbeep.wav',
                     'cat':'catbeep.wav',
@@ -61,6 +60,13 @@ animal_sound_files={'person':'beebuzz.wav',
                     'zebra':'thunder.wav'}
 
 pulse_seq_idx=0
+
+
+def init_camera():
+    cam = cv2.VideoCapture(0)
+    cam.set(3,CAM_RESOLUTION[0])
+    cam.set(4,CAM_RESOLUTION[1])
+
 def rotate_stepper_motor(deg): # deg - for left + for right
     global pulse_seq_idx
     steps=abs(int(deg/STEP_ANGLE))
@@ -73,19 +79,15 @@ def rotate_stepper_motor(deg): # deg - for left + for right
             pulse_seq_idx = 3 if pulse_seq_idx==0 else pulse_seq_idx-1
         time.sleep(PULSE_TIME)
         
-
-def capture_image(write=False):
+def capture_image():
     global cam
     success, img = cam.read()
     if success:
-        if write:
-            cv2.imwrite(IMG_FILE, img)
         return img
     print("Image capture failed\nretrying\n")
-    cam = cv2.VideoCapture(0)
-    cam.set(3,CAM_RESOLUTION[0])
-    cam.set(4,CAM_RESOLUTION[1])
-    return capture_image(write)
+    # Reinitiating camera & retrying
+    init_camera()
+    return capture_image()
     
 
 def play_sound(soundfile, playtime=SOUND_PLAY_TIME):
@@ -96,40 +98,50 @@ def play_sound(soundfile, playtime=SOUND_PLAY_TIME):
     playing.stop()
  
 def repel(creature, attempt):
-    
-    if attempt>MAX_REPEL_ATTEMPTS:
-        print("Can't repel.")
-    else:
-        if creature=='bird':
-            soundfile=random.choice(bird_sound_files)
-        else :
-            soundfile=animal_sound_files[creature]
-        play_sound(SOUNDS_DIRECTORY+soundfile)
+    if creature=='bird':
+        soundfile=random.choice(bird_sound_files)
+    else :
+        soundfile=animal_sound_files[creature]
+    play_sound(SOUNDS_DIRECTORY+soundfile)
+
+# Executed when can't able to repel 
+def final_act():
+    print("Can't repel.")
 
 def main():
     print("Peckaway started.")
     bd.initialize()
     attempt=1
-    curent_angle=COVER_ANGLE/2
     rdir=1
+
     try:
         while True:
-            if curent_angle>COVER_ANGLE or curent_angle<0:
-                rdir*=-1
+            for i in range (int(COVER_ANGLE/ROTATE_ANGLE)): 
+                # wait shoot wait to prevent shake
+                time.sleep(ROTATE_DELAY/2)
+                # Executes until the creature is repelled, if repelled or nothing found attempt resets
+                # else try again and if more than max attempts reached else part of while loop
+                while (attempt<=MAX_REPEL_ATTEMPTS):
+                    img=capture_image()
+                    creature=bd.detect(img)
+                    if creature : 
+                        repel(creature, attempt)
+                        cv2.imwrite(IMG_FILE, img)
+                        cp.push(IMG_FILE, creature)
+                        attempt+=1
+                    else:
+                        break
+                else: # This executes only if attempt > MAX_REPEL_ATTEMPT
+                    final_act()
+                attempt=1
 
-            creature=bd.detect(capture_image(True))
-            if creature :
-                if attempt<=MAX_REPEL_ATTEMPTS+1 : 
-                    repel(creature, attempt)
-                    cp.push(IMG_FILE, creature)
-                    attempt+=1
-                    continue # Try to repel untill it goes
+                rotate_stepper_motor(rdir*ROTATE_ANGLE)
+                time.sleep(ROTATE_DELAY/2)
+            rdir*=-1 # rotation is reversed each time to prevent spinning of wires
 
-            rotate_stepper_motor(rdir*ROTATE_ANGLE)
-            curent_angle+=rdir*ROTATE_ANGLE
-            attempt=1
-            time.sleep(ROTATE_DELAY)
-            # cloud push
+            #rover motion
+            rover.run(rover.forward, rover.MOVE_DELAY)
+
     except KeyboardInterrupt as ke:
         print(ke)
     finally:

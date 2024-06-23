@@ -2,14 +2,12 @@ import cloudinary
 import cloudinary.uploader
 import thingspeak
 from datetime import datetime
-
-
 import cloudinary
           
 cloudinary.config( 
-  cloud_name = "dqcqguq0c", 
-  api_key = "925586279826923", 
-  api_secret = "vNL8AgIflYuTLcL6suhF5lrjw8M" 
+  cloud_name = "dqcqguq0c",
+  api_key = "925586279826923",
+  api_secret = "vNL8AgIflYuTLcL6suhF5lrjw8M"
 )
 
 
