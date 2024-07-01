@@ -9,7 +9,7 @@
 #define MLp A2
 #define MRp A3
 #define MRn A4
-#define LASER_PIN 9
+#define LASER_PIN 11
 #define SERVO_PIN 10
 
 // delays and threshold
@@ -25,18 +25,16 @@
 #define SERVO_STEP_DELAY 50 //ms
 
 uint8_t OFF[] ={0,0,0,0}; // driver inputs 1,2,3,4
-uint8_t FORWARD[] ={1,0,1,0};
-uint8_t REVERSE[] ={0,1,0,1};
-uint8_t LEFT[] ={0,1,1,0};
-uint8_t RIGHT[] ={1,0,0,1};
-uint8_t LEFT_ONLY[]={1,0,0,0};
-uint8_t RIGHT_ONLY[]={0,0,1,0};
+uint8_t FORWARD[] ={0,1,0,1};
+uint8_t REVERSE[] ={1,0,1,0};
+uint8_t TURN_LEFT[] ={1,0,0,1};
+uint8_t TURN_RIGHT[] ={0,1,1,0};
+uint8_t STEER_LEFT[]={0,0,0,1};
+uint8_t STEER_RIGHT[]={0,1,0,0};
 
-HCSR04 us_front(2,3);
-HCSR04 us_left(6,7);
-HCSR04 us_right(4,5);
-
-long distance_travelled=0; // distance travelled in decimeters
+HCSR04 us_right(6,7);
+HCSR04 us_left(8,9);
+HCSR04 us_front(4,5);
 
 // l, f, r 0-free 1-obstacle
 uint8_t LFR[]={0,0,0};
@@ -50,7 +48,7 @@ uint8_t O[]={1,1,1};
 
 Servo lsrservo;
 
-uint8_t* get_surround_distance();
+void get_surround_distance();
 void motorWrite(uint8_t* vals);
 void exec_cmd(String cmd);
 void go_straight();
@@ -79,10 +77,8 @@ void loop() {
     delay(100);
 }
 
-uint8_t* get_surround_distance(){
-    uint8_t dists[3] = {0,0,0}; //flrb 
-    dists[1]=us_front.dist();
-    delay(60);
+uint8_t dists[3] = {0,0,0};
+void get_surround_distance(){
     /*
     for (uint8_t i = 0; i < 10; i++) // take 10 samples 
     {
@@ -96,10 +92,13 @@ uint8_t* get_surround_distance(){
     delay(60);
     dists[0]=us_left.dist();
     delay(60);
+    dists[1]=us_front.dist();
+    delay(60);
     dists[2]=us_right.dist();
-    Serial.print(dists[1]);
-    Serial.print(dists[2]);
-    return dists;
+    
+    // Serial.print(dists[1]);
+    // Serial.print(dists[2]);
+    return;
 }
 
 void motorWrite(uint8_t* vals){ // duration in ms
@@ -124,17 +123,17 @@ void exec_cmd(String cmd){
     else if (cmd=="REV")
         motorWrite(REVERSE);
     else if (cmd=="LFT"){
-        motorWrite(LEFT);
-        delay(TURN_DELAY);
-        motorWrite(OFF);
+        Serial.print("DONE;");
+        motorWrite(TURN_LEFT);
+        return;
     } else if(cmd=="RGT"){
-        motorWrite(RIGHT);
-        delay(TURN_DELAY);
-        motorWrite(OFF);
+        Serial.print("DONE;");
+        motorWrite(TURN_RIGHT);
+        return;
     } else if(cmd=="UTRN"){
-        motorWrite(RIGHT);
-        delay(2*TURN_DELAY);
-        motorWrite(OFF);
+        Serial.print("DONE;");
+        motorWrite(TURN_RIGHT);
+        return;
     }else if(cmd=="GOLFR")
         go_junction(LFR);
     else if(cmd=="GOLR")
@@ -156,7 +155,7 @@ void exec_cmd(String cmd){
     } else if(cmd=="NOP")
         ;
     else{
-        Serial.print("ERR;WRONGCMD;"+cmd+";");
+        Serial.print("ERR;WRONGCMD:"+cmd+";");
         return;
     }
     Serial.print("DONE;"); // for blocking commands
@@ -165,16 +164,16 @@ void exec_cmd(String cmd){
 
 void go_straight(){  // blocking function 
     do{
-        uint8_t* dists=get_surround_distance();
-        int8_t err=dists[0]-dists[2]; // + means more in right - means more in left
+        get_surround_distance();
+        uint8_t err=dists[0]-dists[2]; // + means more in right - means more in left
         uint8_t steer_delay;
         if (abs(err)>ERR_THRESHOLD){
             steer_delay=KP*abs(err);
             if (err>0){
-                motorWrite(LEFT_ONLY);
+                motorWrite(STEER_LEFT);
                 delay(steer_delay);
             } else {
-                motorWrite(RIGHT_ONLY);
+                motorWrite(STEER_RIGHT);
                 delay(steer_delay);
             }
             motorWrite(FORWARD);
@@ -184,26 +183,25 @@ void go_straight(){  // blocking function
 }
 
 void go_junction(uint8_t* junction){
+    Serial.println(String(junction[0])+""+junction[1]+""+String(junction[2]));
     uint8_t current_junction[3];
-    uint8_t* dists;
     do{
     motorWrite(FORWARD);
     delay(100);
-    dists=get_surround_distance();
+    get_surround_distance();
     for(uint8_t i=0; i<3; i++)
         current_junction[i]=(dists[i]<OBSTACLE_THRESHOLD)?1:0;
-    // Serial.println(dists[0]);
-    // Serial.println(dists[1]);
-    // Serial.println(dists[2]);
-    }while(current_junction!=junction);
-    delay(100);
+    
+    Serial.println(String(current_junction[0])+" "+String(current_junction[1])+" "+String(current_junction[2]));
+    }while(!(current_junction[0]==junction[0] && current_junction[1]==junction[1] && current_junction[2]==junction[2]) && !Serial.available());
+    delay(200);
     motorWrite(OFF);
 }
 
 // takes 3 sec for 30 to 90 deg
 void laser_sweep(){
     digitalWrite(LASER_PIN, HIGH);
-    for(uint8_t i=40; i<130; i++){ // initial angle is 30
+    for(uint8_t i=40; i<110; i++){ // initial angle is 30
         lsrservo.write(i);
         delay(SERVO_STEP_DELAY);
     }
