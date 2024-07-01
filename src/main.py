@@ -49,7 +49,7 @@ GPIO.setup(MOTOR_CHANNEL,GPIO.OUT)
 pygame.mixer.init()
 
 bird_sound_files=['catbeep.wav', 'hawk.wav', 'shotgun.wav', 'machinegun.wav']
-animal_sound_files={'person':'beebuzz.wav',
+animal_sound_files={'person':'machinegun.wav',
                     'dog':'dogbeep.wav',
                     'cat':'catbeep.wav',
                     'cow':'dogsbark.wav',
@@ -61,18 +61,19 @@ animal_sound_files={'person':'beebuzz.wav',
                     'book':'beep.wav',
                     'zebra':'thunder.wav'}
 
-cheights = {'person':1,
-                    'bird':20,
-                    'dog':60,
-                    'cat':25,
-                    'cow':1,
-                    'elephant':1,
-                    'bear':1,
-                    'horse':1,
-                    'sheep':1,
-                    'giraffe':1,
+# Tunable
+cheights = {'person':100,  # it draws bunding box for half the person also
+                    'bird':15,
+                    'dog':50,
+                    'cat':20,
+                    'cow':120,
+                    'elephant':250,
+                    'bear':160,
+                    'horse':140,
+                    'sheep':100,
+                    'giraffe':450,
                     'book':20,
-                    'zebra':1}
+                    'zebra':110}
 
 pulse_seq_idx=0
 
@@ -103,6 +104,7 @@ def capture_image():
         return img
     print("Image capture failed\nretrying\n")
     # Reinitiating camera & retrying
+    cam.release()
     init_camera()
     return capture_image()
     
@@ -149,7 +151,11 @@ def main():
                 # else try again and if more than max attempts reached else part of while loop
                 while (attempt<=MAX_REPEL_ATTEMPTS):
                     img=capture_image()
-                    creature, pixheight=bd.detect(img)
+                    for i in range(3): # try three time to check ifcreatur detected
+                        creature, pixheight=bd.detect(img)
+                        if creature:
+                            break
+                    print("Creatures found:",creature)
                     if creature : 
                         dist=bd.calc_object_dist(cheights[creature],pixheight)
                         if dist>0:

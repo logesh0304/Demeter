@@ -8,7 +8,7 @@ CONFIGFILE='./model/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
 CLASSFILE='./model/coco.names'
 
 classNames=[]
-myClass=['person','bird','cat', 'dog', 'horse','sheep', 'cow', 'elephant','bear','zebra', 'giraffe', 'book']
+myClass=['bird','cat', 'dog', 'horse','sheep', 'cow', 'elephant','bear','zebra', 'giraffe', 'book']
 
 net=None
 def initialize():
@@ -25,7 +25,7 @@ def initialize():
     net.setInputSwapRB(True)
     print("Model loaded")
 
-focal_length=1600
+focal_length=960
 def calc_object_dist(true_height, pixel_height):
   dist = round((true_height*focal_length)/pixel_height);
   print("at distance:",dist)
@@ -36,7 +36,7 @@ def detect(img, draw=False, detectclasses=myClass):
     start=time.time()
     classIds, confs, bbox = net.detect(img,confThreshold=CONFIDENCE_THRESHOlD,nmsThreshold=NMS_THRESHOLD)
     end=time.time()
-    print("Detected in {:.6f} seconds".format(end-start))
+    #print("Detected in {:.6f} seconds".format(end-start))
 
     findings=[]
     if len(classIds) != 0:
@@ -63,17 +63,12 @@ def detect(img, draw=False, detectclasses=myClass):
     creature=""
     finbox=[0,0,0,0]
     if len(foundedcls)>1:
-        if foundedcls.count('person')>0 :
-            i=foundedcls.index('person')
-            foundedcls.pop(i)
-            confs.pop(i)
-            boxs.pop(i)
         idx=confs.index(max(confs))
         creature=foundedcls[idx]
         finbox=boxs[idx]
     elif len(foundedcls)==1:
         creature=foundedcls[0]
         finbox=boxs[0]
-    print("Creatures found:",creature)
+    #print("Creatures found:",creature)
     return creature, int(finbox[3]-finbox[1])
   
