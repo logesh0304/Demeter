@@ -7,7 +7,7 @@ ser=None
 
 STEPDIST=30 #cm
 SPEED = 23.5 #cm/sec
-TURN_DELAY=1 #sec for 90 deg turn
+TURN_DELAY=1.6 #sec for 90 deg turn
 
 pos=[0,0]
 heading=0
